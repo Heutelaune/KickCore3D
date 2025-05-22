@@ -1,0 +1,53 @@
+/* Globale Styles für bessere Performance */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: 'Arial', sans-serif;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .ui-overlay {
+    flex-direction: column;
+    gap: 10px;
+  }
+  
+  .sound-controls {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  
+  .sound-btn {
+    padding: 8px 16px;
+    font-size: 12px;
+  }
+}
+
+/* Loading Animation */
+.loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  background: #1a1a1a;
+  color: white;
+}
+
+.loading::after {
+  content: '';
+  width: 50px;
+  height: 50px;
+  border: 5px solid #333;
+  border-top: 5px solid #00ff00;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
