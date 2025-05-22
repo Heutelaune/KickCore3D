@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Fußball Controller</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .header {
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 15px;
+            text-align: center;
+        }
+        
+        .connection-status {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #ff4757;
+            transition: background 0.3s;
+        }
+        
+        .status-indicator.connected {
+            background: #2ed573;
+        }
+        
+        .join-form {
+            background: rgba(255, 255, 255, 0.9);
+            margin: 20px;
+            padding: 20px;
+            border-radius: 15px;
+            display: none;
+        }
+        
+        .join-form.active {
+            display: block;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+        }
+        
+        .form-group input:focus {
+            border-color: #667eea;
+            outline: none;
+        }
+        
+        .join-btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        
+        .join-btn:active {
+            transform: scale(0.98);
+        }
+        
+        .controller {
+            flex: 1;
+            display: none;
+            flex-direction: column;
+            padding: 20px;
+        }
+        
+        .controller.active {
+            display: flex;
+        }
+        
+        .player-info {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            color: white;
+            margin-bottom: 20px;
+        }
+        
+        .player-avatar {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            margin: 0 auto 10px;
+            border: 3px solid white;
+        }
+        
+        .controls-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 20px;
+        }
+        
+        .dpad {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            grid-template-rows: 1fr 1fr 1fr;
+            gap: 10px;
+            max-width: 300px;
+            margin: 0 auto;
+            aspect-ratio: 1;
+        }
+        
+        .dpad-btn {
+            background: rgba(255, 255, 255, 0.9);
+            border: none;
+            border-radius: 15px;
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 80px;
+        }
+        
+        .dpad-btn:active {
+            background: rgba(255, 255, 255, 1);
+            transform: scale(0.95);
+        }
+        
+        .dpad-btn.disabled {
+            opacity: 0.3;
+            pointer-events: none;
+        }
+        
+        .dpad-up {
+            grid-column: 2;
+            grid-row: 1;
+        }
+        
+        .dpad-left {
+            grid-column: 1;
+            grid-row: 2;
+        }
+        
+        .dpad-right {
+            grid-column: 3;
+            grid-row: 2;
+        }
+        
+        .dpad-down {
+            grid-column: 2;
+            grid-row: 3;
+        }
+        
+        .joystick-container {
+            display: none;
+            position: relative;
+            width: 200px;
+            height: 200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            border: 3px solid rgba(255, 255, 255, 0.5);
+        }
+        
+        .joystick-knob {
+            position: absolute;
+            width: 80px;
+            height: 80px;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 50%;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            cursor: pointer;
+            transition: all 0.1s ease;
+            border: 3px solid #667eea;
+        }
+        
+        .control-mode-toggle {
+            text-align: center;
+            margin: 20px 0;
+        }
+        
+        .toggle-btn {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 2px solid rgba(255, 255, 255, 0.5);
+            padding: 10px 20px;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .toggle-btn.active {
+            background: rgba(255, 255, 255, 0.9);
+            color: #333;
+        }
+        
+        .feedback {
+            text-align: center;
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 8px;
+            transition: all 0.3s;
+        }
+        
+        .feedback.success {
+            background: rgba(46, 213, 115, 0.2);
+            color: white;
+        }
+        
+        .feedback.error {
+            background: rgba(255, 71, 87, 0.2);
+            color: white;
+        }
+        
+        .vibration-indicator {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 255, 255, 0.9);
+            padding: 20px;
+            border-radius: 10px;
+            font-weight: bold;
+            z-index: 1000;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>⚽ Fußball Controller</h1>
+        <div class="connection-status">
+            <div class="status-indicator" id="statusIndicator"></div>
+            <span id="statusText">Nicht verbunden</span>
+        </div>
+    </div>
+    
+    <div class="join-form active" id="joinForm">
+        <div class="form-group">
+            <label for="roomCode">Raumcode:</label>
+            <input type="text" id="roomCode" placeholder="z.B. ABCD" maxlength="4" style="text-transform: uppercase;">
+        </div>
+        <div class="form-group">
+            <label for="playerName">Dein Name:</label>
+            <input type="text" id="playerName" placeholder="Spielername" maxlength="20">
+        </div>
+        <button class="join-btn" onclick="joinGame()">Spiel beitreten</button>
+        <div class="feedback" id="joinFeedback"></div>
+    </div>
+    
+    <div class="controller" id="controller">
+        <div class="player-info">
+            <div class="player-avatar" id="playerAvatar"></div>
+            <div id="playerName"></div>
+            <div id="roomInfo"></div>
+        </div>
+        
+        <div class="control-mode-toggle">
+            <button class="toggle-btn active" id="dpadToggle" onclick="switchControlMode('dpad')">D-Pad</button>
+            <button class="toggle-btn" id="joystickToggle" onclick="switchControlMode('joystick')">Joystick</button>
+        </div>
+        
+        <div class="controls-container">
+            <!-- D-Pad Controls -->
+            <div class="dpad" id="dpadControls">
+                <button class="dpad-btn dpad-up" onmousedown="startMove('up')" onmouseup="stopMove()" ontouchstart="startMove('up')" ontouchend="stopMove()">
+                    ⬆️
+                </button>
