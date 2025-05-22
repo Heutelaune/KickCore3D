@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Multiplayer Fußball</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/aframe/1.4.0/aframe.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            background: #1a1a1a;
+            overflow: hidden;
+        }
+        
+        .ui-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .room-info {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+        }
+        
+        .room-code {
+            font-size: 2em;
+            font-weight: bold;
+            color: #00ff00;
+            margin-bottom: 10px;
+        }
+        
+        .qr-code {
+            width: 80px;
+            height: 80px;
+            background: white;
+            border: 2px solid #00ff00;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            color: black;
+        }
+        
+        .sound-controls {
+            display: flex;
+            gap: 15px;
+        }
+        
+        .sound-btn {
+            padding: 10px 20px;
+            background: #ff6b35;
+            color: white;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        
+        .sound-btn:hover {
+            background: #ff8c42;
+            transform: scale(1.05);
+        }
+        
+        .players-list {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            min-width: 200px;
+        }
+        
+        .player-item {
+            margin: 5px 0;
+            padding: 5px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .player-color {
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+        }
+        
+        .mobile-instructions {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            max-width: 300px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="ui-overlay">
+        <div class="room-info">
+            <div class="room-code" id="roomCode">ROOM: ----</div>
+            <div class="qr-code" id="qrCode">QR-Code<br>Platzhalter</div>
+        </div>
+        
+        <div class="sound-controls">
+            <button class="sound-btn" onclick="playSound('cheer')">🎉 Jubel</button>
+            <button class="sound-btn" onclick="playSound('whistle')">🔔 Pfiff</button>
+            <button class="sound-btn" onclick="playSound('crowd')">👥 Publikum</button>
+            <button class="sound-btn" onclick="playSound('goal')">⚽ Tor!</button>
+        </div>
+    </div>
+    
+    <div class="players-list">
+        <h3>Verbundene Spieler:</h3>
+        <div id="playersList"></div>
+    </div>
+    
+    <div class="mobile-instructions">
+        <h4>🔗 Dem Spiel beitreten:</h4>
+        <p>1. Öffne auf deinem Smartphone:<br>
+        <strong id="joinUrl">localhost:3000/controller</strong></p>
+        <p>2. Gib den Raumcode ein</p>
+        <p>3. Steuere deinen Avatar!</p>
+    </div>
+
+    <a-scene embedded style="height: 100vh; width: 100vw;">
+        <!-- Sky and Environment -->
+        <a-sky color="#87CEEB"></a-sky>
+        
+        <!-- Lighting -->
+        <a-light type="ambient" color="#ffffff" intensity="0.6"></a-light>
+        <a-light type="directional" position="10 20 10" color="#ffffff" intensity="0.8"></a-light>
+        
+        <!-- Football Field -->
+        <a-entity id="football-field">
+            <!-- Main Field -->
+            <a-box position="0 0 0" width="20" height="0.1" depth="30" color="#228B22" material="roughness: 0.8"></a-box>
+            
+            <!-- Field Lines -->
+            <!-- Center Line -->
+            <a-box position="0 0.051 0" width="20" height="0.01" depth="0.2" color="white"></a-box>
+            
+            <!-- Center Circle -->
+            <a-torus position="0 0.051 0" radius-inner="3" radius-outer="3.2" color="white" rotation="90 0 0"></a-torus>
+            
+            <!-- Goal Areas -->
+            <!-- Left Goal Area -->
+            <a-box position="-8.5 0.051 0" width="3" height="0.01" depth="12" color="white" material="transparent: true; opacity: 0.3"></a-box>
+            <a-box position="-8.5 0.051 6" width="3" height="0.01" depth="0.2" color="white"></a-box>
+            <a-box position="-8.5 0.051 -6" width="3" height="0.01" depth="0.2" color="white"></a-box>
+            <a-box position="-7 0.051 0" width="0.2" height="0.01" depth="12" color="white"></a-box>
+            
+            <!-- Right Goal Area -->
+            <a-box position="8.5 0.051 0" width="3" height="0.01" depth="12" color="white" material="transparent: true; opacity: 0.3"></a-box>
+            <a-box position="8.5 0.051 6" width="3" height="0.01" depth="0.2" color="white"></a-box>
+            <a-box position="8.5 0.051 -6" width="3" height="0.01" depth="0.2" color="white"></a-box>
+            <a-box position="7 0.051 0" width="0.2" height="0.01" depth="12" color="white"></a-box>
+            
+            <!-- Goals -->
+            <a-entity id="left-goal" position="-10 1 0">
+                <a-box width="0.2" height="2" depth="6" color="#ffffff"></a-box>
+                <a-box position="0 1 3" width="0.2" height="2" depth="0.2" color="#ffffff"></a-box>
+                <a-box position="0 1 -3" width="0.2" height="2" depth="0.2" color="#ffffff"></a-box>
+                <a-box position="0 2 0" width="0.2" height="0.2" depth="6" color="#ffffff"></a-box>
+            </a-entity>
+            
+            <a-entity id="right-goal" position="10 1 0">
+                <a-box width="0.2" height="2" depth="6" color="#ffffff"></a-box>
+                <a-box position="0 1 3" width="0.2" height="2" depth="0.2" color="#ffffff"></a-box>
+                <a-box position="0 1 -3" width="0.2" height="2" depth="0.2" color="#ffffff"></a-box>
+                <a-box position="0 2 0" width="0.2" height="0.2" depth="6" color="#ffffff"></a-box>
+            </a-entity>
+            
+            <!-- Field Boundaries -->
+            <a-box position="0 0.051 15" width="20" height="0.01" depth="0.2" color="white"></a-box>
+            <a-box position="0 0.051 -15" width="20" height="0.01" depth="0.2" color="white"></a-box>
+            <a-box position="10 0.051 0" width="0.2" height="0.01" depth="30" color="white"></a-box>
+            <a-box position="-10 0.051 0" width="0.2" height="0.01" depth="30" color="white"></a-box>
+        </a-entity>
+        
+        <!-- Ball -->
+        <a-sphere id="ball" position="0 0.5 0" radius="0.3" color="#000000" 
+                  material="color: #ffffff; roughness: 0.1"
+                  animation="property: rotation; to: 360 360 360; loop: true; dur: 10000">
+        </a-sphere>
+        
+        <!-- Camera -->
+        <a-camera position="0 25 20" rotation="-45 0 0" wasd-controls="enabled: false"></a-camera>
+    </a-scene>
+
+    <script>
+        // WebSocket Server Simulation (in real deployment, use actual WebSocket server)
+        class GameServer {
+            constructor() {
+                this.players = new Map();
+                this.roomCode = this.generateRoomCode();
+                this.sounds = {};
+                this.initAudio();
+                this.updateUI();
+                
+                // Simulate WebSocket connections
+                this.clients = [];
+                this.startServer();
+            }
+            
+            generateRoomCode() {
+                return Math.random().toString(36).substring(2, 6).toUpperCase();
+            }
+            
+            initAudio() {
+                // Initialize Web Audio API
+                this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                
+                // Create sound buffers (simplified - in real app, load actual audio files)
+                this.createSynthSound('cheer', [440, 554, 659], 2000, 'triangle');
+                this.createSynthSound('whistle', [2000], 500, 'sine');
+                this.createSynthSound('crowd', [200, 150, 100], 3000, 'sawtooth');
+                this.createSynthSound('goal', [523, 659, 784, 1047], 1500, 'square');
+            }
+            
+            createSynthSound(name, frequencies, duration, waveType = 'sine') {
+                this.sounds[name] = () => {
+                    frequencies.forEach((freq, index) => {
+                        const oscillator = this.audioContext.createOscillator();
+                        const gainNode = this.audioContext.createGain();
+                        
+                        oscillator.connect(gainNode);
+                        gainNode.connect(this.audioContext.destination);
+                        
+                        oscillator.frequency.setValueAtTime(freq, this.audioContext.currentTime);
+                        oscillator.type = waveType;
+                        
+                        gainNode.gain.setValueAtTime(0, this.audioContext.currentTime);
+                        gainNode.gain.linearRampToValueAtTime(0.3, this.audioContext.currentTime + 0.1);
+                        gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + duration / 1000);
+                        
+                        oscillator.start(this.audioContext.currentTime + index * 0.1);
+                        oscillator.stop(this.audioContext.currentTime + duration / 1000);
+                    });
+                };
+            }
+            
+            playSound(soundName) {
+                if (this.sounds[soundName]) {
+                    this.sounds[soundName]();
+                }
+            }
+            
+            addPlayer(playerId, playerName) {
+                const colors = ['#ff6b6b', '#4ecdc4', '#45b7d1', '#96ceb4', '#feca57', '#ff9ff3', '#54a0ff'];
+                const color = colors[this.players.size % colors.length];
+                
+                const player = {
+                    id: playerId,
+                    name: playerName || `Player ${this.players.size + 1}`,
+                    color: color,
+                    position: { x: 0, z: 0 },
+                    avatar: null
+                };
+                
+                this.players.set(playerId, player);
+                this.createPlayerAvatar(player);
+                this.updatePlayersList();
+                
+                return player;
+            }
+            
+            createPlayerAvatar(player) {
+                const scene = document.querySelector('a-scene');
+                const avatar = document.createElement('a-entity');
+                avatar.setAttribute('id', `player-${player.id}`);
+                avatar.setAttribute('position', `${player.position.x} 1 ${player.position.z}`);
+                
+                // Create avatar components
+                const body = document.createElement('a-cylinder');
+                body.setAttribute('radius', '0.3');
+                body.setAttribute('height', '1.5');
+                body.setAttribute('color', player.color);
+                body.setAttribute('position', '0 0.75 0');
+                
+                const head = document.createElement('a-sphere');
+                head.setAttribute('radius', '0.2');
+                head.setAttribute('color', player.color);
+                head.setAttribute('position', '0 1.7 0');
+                
+                const nameTag = document.createElement('a-text');
+                nameTag.setAttribute('value', player.name);
+                nameTag.setAttribute('position', '0 2.2 0');
+                nameTag.setAttribute('align', 'center');
+                nameTag.setAttribute('color', 'white');
+                nameTag.setAttribute('scale', '2 2 2');
+                
+                avatar.appendChild(body);
+                avatar.appendChild(head);
+                avatar.appendChild(nameTag);
+                
+                scene.appendChild(avatar);
+                player.avatar = avatar;
+            }
+            
+            movePlayer(playerId, direction) {
+                const player = this.players.get(playerId);
+                if (!player) return;
+                
+                const moveSpeed = 0.5;
+                const fieldBounds = { x: 9, z: 14 };
+                
+                switch(direction) {
+                    case 'left':
+                        player.position.x = Math.max(-fieldBounds.x, player.position.x - moveSpeed);
+                        break;
+                    case 'right':
+                        player.position.x = Math.min(fieldBounds.x, player.position.x + moveSpeed);
+                        break;
+                    case 'up':
+                        player.position.z = Math.max(-fieldBounds.z, player.position.z - moveSpeed);
+                        break;
+                    case 'down':
+                        player.position.z = Math.min(fieldBounds.z, player.position.z + moveSpeed);
+                        break;
+                }
+                
+                if (player.avatar) {
+                    player.avatar.setAttribute('position', 
+                        `${player.position.x} 1 ${player.position.z}`);
+                }
+                
+                // Animate movement
+                player.avatar.setAttribute('animation', 
+                    `property: rotation; to: 0 ${Math.random() * 360} 0; dur: 200`);
+            }
+            
+            updatePlayersList() {
+                const playersList = document.getElementById('playersList');
+                playersList.innerHTML = '';
+                
+                this.players.forEach(player => {
+                    const playerDiv = document.createElement('div');
+                    playerDiv.className = 'player-item';
+                    playerDiv.innerHTML = `
+                        <div class="player-color" style="background-color: ${player.color}"></div>
+                        <span>${player.name}</span>
+                    `;
+                    playersList.appendChild(playerDiv);
+                });
+            }
+            
+            updateUI() {
+                document.getElementById('roomCode').textContent = `ROOM: ${this.roomCode}`;
+                document.getElementById('joinUrl').textContent = `${window.location.host}/controller`;
+            }
+            
+            startServer() {
+                // Simulate server running
+                console.log(`Game Server started. Room Code: ${this.roomCode}`);
+                
+                // Add some demo players for testing
+                setTimeout(() => {
+                    this.simulatePlayerJoin('demo1', 'Demo Player 1');
+                }, 2000);
+                
+                setTimeout(() => {
+                    this.simulatePlayerJoin('demo2', 'Demo Player 2');
+                }, 4000);
+            }
+            
+            simulatePlayerJoin(id, name) {
+                this.addPlayer(id, name);
+                
+                // Simulate random movement
+                setInterval(() => {
+                    const directions = ['left', 'right', 'up', 'down'];
+                    const direction = directions[Math.floor(Math.random() * directions.length)];
+                    this.movePlayer(id, direction);
+                }, 2000 + Math.random() * 3000);
+            }
+        }
+        
+        // Initialize Game Server
+        const gameServer = new GameServer();
+        
+        // Global sound function
+        function playSound(soundName) {
+            gameServer.playSound(soundName);
+        }
+        
+        // WebSocket connection handling (simplified)
+        // In real deployment, implement actual WebSocket server
+        function handleWebSocketConnection(socket) {
+            socket.on('join', (data) => {
+                const player = gameServer.addPlayer(socket.id, data.name);
+                socket.emit('playerCreated', player);
+            });
+            
+            socket.on('move', (data) => {
+                gameServer.movePlayer(socket.id, data.direction);
+            });
+            
+            socket.on('disconnect', () => {
+                gameServer.players.delete(socket.id);
+                gameServer.updatePlayersList();
+            });
+        }
+        
+        // Controller interface handling
+        window.addEventListener('message', (event) => {
+            if (event.data.type === 'controllerInput') {
+                gameServer.movePlayer(event.data.playerId, event.data.direction);
+            }
+        });
+        
+        // Ball animation and interactions
+        function initBallPhysics() {
+            const ball = document.getElementById('ball');
+            let ballPosition = { x: 0, y: 0.5, z: 0 };
+            let ballVelocity = { x: 0, y: 0, z: 0 };
+            
+            setInterval(() => {
+                // Simple ball physics
+                ballVelocity.x *= 0.98; // Friction
+                ballVelocity.z *= 0.98;
+                
+                ballPosition.x += ballVelocity.x;
+                ballPosition.z += ballVelocity.z;
+                
+                // Boundary collision
+                if (Math.abs(ballPosition.x) > 9.5) {
+                    ballVelocity.x *= -0.8;
+                    ballPosition.x = Math.sign(ballPosition.x) * 9.5;
+                }
+                if (Math.abs(ballPosition.z) > 14.5) {
+                    ballVelocity.z *= -0.8;
+                    ballPosition.z = Math.sign(ballPosition.z) * 14.5;
+                }
+                
+                ball.setAttribute('position', `${ballPosition.x} ${ballPosition.y} ${ballPosition.z}`);
+            }, 50);
+        }
+        
+        // Initialize ball physics
+        setTimeout(initBallPhysics, 1000);
+        
+        // Auto-play crowd sound for atmosphere
+        setInterval(() => {
+            if (Math.random() < 0.1) { // 10% chance every interval
+                gameServer.playSound('crowd');
+            }
+        }, 10000);
+    </script>
+</body>
+</html>
